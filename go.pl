@@ -29,20 +29,20 @@ direction(left).
 direction(right).
 
 neighbor([X, Y], [X1, Y1], up) :-
-  X1 = X,
-  Y1 = Y + 1,
+  X1 is X,
+  Y1 is Y + 1,
   point([X1, Y1]).
 neighbor([X, Y], [X1, Y1], down) :-
-  X1 = X,
-  Y1 = Y - 1,
+  X1 is X,
+  Y1 is Y - 1,
   point([X1, Y1]).
 neighbor([X, Y], [X1, Y1], left) :-
-  X1 = X - 1,
-  Y1 = Y,
+  X1 is X - 1,
+  Y1 is Y,
   point([X1, Y1]).
 neighbor([X, Y], [X1, Y1], right) :-
-  X1 = X + 1,
-  Y1 = Y,
+  X1 is X + 1,
+  Y1 is Y,
   point([X1, Y1]).
    
 % Points can be empty or occupied by a player.
@@ -71,11 +71,21 @@ pointColor(Board, [X,Y], Color) :-
   nth0(X, Board, Row),
   nth0(Y, Row, Color). 
 
-reachesEmpty(Point, Board) :- 
-  write(Point),
-  pointColor(Board, Point, empty).
 reachesEmpty(Point, Board) :-
+  reachesEmpty(Point, Board, []), !.
+
+reachesEmpty(Point, Board, _) :- 
+  pointColor(Board, Point, empty).
+
+reachesEmpty(Point, Board, _) :-
   neighbor(Point, Neighbor, _),
+  pointColor(Board, Neighbor, empty).
+
+reachesEmpty(Point, Board, Visited) :-
+  neighbor(Point, Neighbor, _),
+  pointColor(Board, Point, Color),
+  pointColor(Board, Neighbor, Color),
+  \+ member(Neighbor, Visited),
   reachesEmpty(Neighbor, Board).
 
 % This is inefficient.
@@ -93,6 +103,13 @@ mask(Board, Point, NewBoard) :-
   delete(L, Point, L1),
   forall(member(Elem, L1), sameColor(Board, Elem, NewBoard)).
 
+stonePlaced(Board, [X, Y], Color, NewBoard) :-
+  nth0(X, Board, Row),
+  nth0(Y, Row, _, RemovedRow),
+  nth0(Y, NewRow, Color, RemovedRow),
+  nth0(X, Board, _, RemovedBoard),
+  nth0(X, NewBoard, NewRow, RemovedBoard).
+
 % A stone must either reach empty, or be removed in the new board
 notSurrounded(Board, _, Elem) :-
   reachesEmpty(Elem, Board).
@@ -102,13 +119,22 @@ notSurrounded(Board, NewBoard, Elem) :-
   pointColor(NewBoard, Elem, empty).
 
 % True if all points in Board for Color that were not reachable are removed in NewBoard
+pointConsistent(Board, Point, NewBoard) :- 
+  reachesEmpty(Point, Board),
+  pointColor(Board, Point, Color),
+  pointColor(NewBoard, Point, Color),
+  !.
+
+pointConsistent(Board, Point, NewBoard) :-
+  \+ reachesEmpty(Point, Board),
+  pointColor(NewBoard, Point, empty).
+
 isConsistent(Board, Color, NewBoard) :-
   coloredPoints(Color, Board, L),
-  forall(member(Elem, L), notSurrounded(Board, NewBoard, Elem)).
+  forall(member(Elem, L), pointConsistent(Board, Elem, NewBoard)).
   
 evolve(Board, Point, Player, NewBoard) :-
-  mask(Board, Point, IntermediateBoard),
-  pointColor(IntermediateBoard, Point, Player),
+  stonePlaced(Board, Point, Player, IntermediateBoard),
   after(Player, Opponent),
   isConsistent(IntermediateBoard, Opponent, OpponentBoard),
   isConsistent(OpponentBoard, Player, NewBoard).
