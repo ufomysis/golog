@@ -1,5 +1,6 @@
 % Prolog implementation of Go (Tromp-Taylor rules)
 
+
 % There are two players, black and white
 player(black).
 player(white).
@@ -65,16 +66,27 @@ completeColors().
 
 %alive([X,Y], Board) :-
 
+replicate(N,X,Xs) :-
+    length(Xs,N),
+    maplist(=(X),Xs).
 
-game(Board, ToPlay) :-
-  after(Played, ToPlay),
-  move(Board, ToPlay, UpdatedBoard),
-  !,
-  game(UpdatedBoard, Played).
+newBoard(Board) :-
+  size(N),
+  replicate(N, empty, Row),
+  replicate(N, Row, Board).
 
-showBoard([AA,AB,AC,BA,BB,BC,CA,CB,CC], Player) :-
-  write([AA,AB,AC]),nl,
-  write([BA,BB,BC]),nl,
-  write([CA,CB,CC]),nl,
+showRow([]).
+showRow([H|T]) :-
+  color(H),
+  colorChar(H, C),
+  write(C),
+  showRow(T).
+
+showBoard([]).
+showBoard([H|T]) :-
+ showRow(H), !, nl, showBoard(T).
+
+showState(Board, Player) :-
+  showBoard(Board),
   colorString(Player, String),
-  write(String),nl. 
+  write(String), nl.
