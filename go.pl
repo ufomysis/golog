@@ -20,7 +20,7 @@ points(L) :- findall(Point, point(Point), L).
 coloredPoints(Color,Board,L) :- findall(Point, pointColor(Board, Point, Color), L).
 
 % We'll play on a 9x9 board
-size(2).
+size(9).
 
 % We'll use directions to define adjacencies of points
 direction(up).
@@ -86,7 +86,9 @@ reachesEmpty(Point, Board, Visited) :-
   pointColor(Board, Point, Color),
   pointColor(Board, Neighbor, Color),
   \+ member(Neighbor, Visited),
-  reachesEmpty(Neighbor, Board).
+  append(Visited, [Neighbor], NewVisited),
+  !,
+  reachesEmpty(Neighbor, Board, NewVisited).
 
 % This is inefficient.
 legalBoard(Board) :-
@@ -98,68 +100,90 @@ sameColor(Board, Point, NewBoard) :-
   pointColor(Board, Point, Color),
   pointColor(NewBoard, Point, Color).
 
-mask(Board, Point, NewBoard) :-
-  points(L),
-  delete(L, Point, L1),
-  forall(member(Elem, L1), sameColor(Board, Elem, NewBoard)).
-
 stonePlaced(Board, [X, Y], Color, NewBoard) :-
+  pointColor(Board, [X, Y], empty),
   nth0(X, Board, Row),
   nth0(Y, Row, _, RemovedRow),
   nth0(Y, NewRow, Color, RemovedRow),
   nth0(X, Board, _, RemovedBoard),
   nth0(X, NewBoard, NewRow, RemovedBoard).
 
-% A stone must either reach empty, or be removed in the new board
-notSurrounded(Board, _, Elem) :-
-  reachesEmpty(Elem, Board).
-
-notSurrounded(Board, NewBoard, Elem) :-
-  \+ reachesEmpty(Elem, Board),
-  pointColor(NewBoard, Elem, empty).
-
 % True if all points in Board for Color that were not reachable are removed in NewBoard
-pointConsistent(Board, Point, NewBoard) :- 
+pointConsistent(Board, NewBoard, Point) :- 
   reachesEmpty(Point, Board),
   pointColor(Board, Point, Color),
   pointColor(NewBoard, Point, Color),
   !.
 
-pointConsistent(Board, Point, NewBoard) :-
+pointConsistent(Board, NewBoard, Point) :-
   \+ reachesEmpty(Point, Board),
   pointColor(NewBoard, Point, empty).
 
+pointColorConsistent(Board, NewBoard, Color, Point) :-
+  pointColor(Board, Point, OriginalColor),
+  not(OriginalColor = Color),
+  pointColor(NewBoard, Point, OriginalColor),
+  !.
+
+pointColorConsistent(Board, NewBoard, Color, Point) :-
+  pointColor(Board, Point, Color),
+  pointConsistent(Board, NewBoard, Point).
+
 isConsistent(Board, Color, NewBoard) :-
-  coloredPoints(Color, Board, L),
-  forall(member(Elem, L), pointConsistent(Board, Elem, NewBoard)).
+  points(L),
+  maplist(pointColorConsistent(Board, NewBoard, Color), L). % pointColorConsistent(Board, NewBoard) is a Curried Predicate
   
+sameLength(L1, L2) :-
+  length(L1, X),
+  length(L2, X).
+
+sameShape(A1, A2) :-
+  sameLength(A1,A2),
+  maplist(sameLength, A1, A2).
+
 evolve(Board, Point, Player, NewBoard) :-
   stonePlaced(Board, Point, Player, IntermediateBoard),
   after(Player, Opponent),
   isConsistent(IntermediateBoard, Opponent, OpponentBoard),
-  isConsistent(OpponentBoard, Player, NewBoard).
+  isConsistent(OpponentBoard, Player, NewBoard),
+  sameShape(Board,NewBoard).
   
 replicate(N,X,Xs) :-
-    length(Xs,N),
-    maplist(=(X),Xs).
+  length(Xs,N),
+  maplist(=(X),Xs).
 
 newBoard(Board) :-
   size(N),
   replicate(N, empty, Row),
   replicate(N, Row, Board).
 
-showRow([]).
+showRow([]) :-
+  nl.
 showRow([H|T]) :-
   color(H),
   colorChar(H, C),
   write(C),
   showRow(T).
 
-showBoard([]).
+showBoard([]) :- nl.
 showBoard([H|T]) :-
- showRow(H), !, nl, showBoard(T).
+ showRow(H), showBoard(T).
 
 showState(Board, Player) :-
   showBoard(Board),
   colorString(Player, String),
   write(String), nl.
+
+main() :-
+ newBoard(Board),
+ main([Board], black).
+
+main([H|T], Player) :-
+  coloredPoints(empty, H, L),
+  random_member(Point, L),    
+  evolve(H, Point, Player, NewBoard),
+  !,
+  showBoard(NewBoard),
+  after(Player, Other),
+  main([NewBoard, H | T], Other).
+
