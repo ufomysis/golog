@@ -9,7 +9,7 @@ player(white).
 after(black,white).
 after(white,black).
 
-% A square board.
+% They play on a square board.
 point([X, Y]) :-
   size(N),
   Limit is N-1,
@@ -59,41 +59,30 @@ colorChar(empty, "-").
 colorChar(black, "#").
 colorChar(white, "O").
 
-%TODO FIX
-completeColors() :- forall(color(X), colorString(X,_)).
-
-completeColors().
-
 % A point is alive if it is next to an empty point, or is connected to a live point.
-
 pointColor(Board, [X,Y], Color) :-
   point([X,Y]),
   nth0(X, Board, Row),
   nth0(Y, Row, Color). 
 
-reachesEmpty(Point, Board) :-
-  reachesEmpty(Point, Board, []), !.
+reaches(Point, Board, Color) :-
+  reaches(Point, Board, []), !.
 
-reachesEmpty(Point, Board, _) :- 
+reaches(Point, Board, Color, _) :- 
   pointColor(Board, Point, empty).
 
-reachesEmpty(Point, Board, _) :-
+reaches(Point, Board, Color, _) :-
   neighbor(Point, Neighbor, _),
   pointColor(Board, Neighbor, empty).
 
-reachesEmpty(Point, Board, Visited) :-
+reaches(Point, Board, Color, Visited) :-
   neighbor(Point, Neighbor, _),
   pointColor(Board, Point, Color),
   pointColor(Board, Neighbor, Color),
   \+ member(Neighbor, Visited),
   append(Visited, [Neighbor], NewVisited),
   !,
-  reachesEmpty(Neighbor, Board, NewVisited).
-
-% This is inefficient.
-legalBoard(Board) :-
-  points(L),
-  forall(member(Elem, L), reachesEmpty(Elem, Board)).
+  reaches(Neighbor, Board, Color, NewVisited).
 
 % After placing a stone, all the other points are the same
 sameColor(Board, Point, NewBoard) :-
@@ -101,22 +90,21 @@ sameColor(Board, Point, NewBoard) :-
   pointColor(NewBoard, Point, Color).
 
 stonePlaced(Board, [X, Y], Color, NewBoard) :-
-  pointColor(Board, [X, Y], empty),
+  pointColor(Board, [X, Y], empty), % Intersections must be empty to be played on
   nth0(X, Board, Row),
   nth0(Y, Row, _, RemovedRow),
   nth0(Y, NewRow, Color, RemovedRow),
   nth0(X, Board, _, RemovedBoard),
   nth0(X, NewBoard, NewRow, RemovedBoard).
 
-% True if all points in Board for Color that were not reachable are removed in NewBoard
 pointConsistent(Board, NewBoard, Point) :- 
-  reachesEmpty(Point, Board),
+  reaches(Point, Board, empty),
   pointColor(Board, Point, Color),
   pointColor(NewBoard, Point, Color),
   !.
 
 pointConsistent(Board, NewBoard, Point) :-
-  \+ reachesEmpty(Point, Board),
+  \+ reaches(Point, Board, empty),
   pointColor(NewBoard, Point, empty).
 
 pointColorConsistent(Board, NewBoard, Color, Point) :-
@@ -129,6 +117,7 @@ pointColorConsistent(Board, NewBoard, Color, Point) :-
   pointColor(Board, Point, Color),
   pointConsistent(Board, NewBoard, Point).
 
+% True if all points in Board for Color that do not reach empty are removed in NewBoard
 isConsistent(Board, Color, NewBoard) :-
   points(L),
   maplist(pointColorConsistent(Board, NewBoard, Color), L). % pointColorConsistent(Board, NewBoard) is a Curried Predicate
