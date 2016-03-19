@@ -194,8 +194,8 @@ main([H|T], Player) :-
   evolve(H, Point, Player, NewBoard),
   sameShape(H, NewBoard),
   not(member(NewBoard, [H|T])),
-  !,
   after(Player, Other),
   showState(NewBoard, Other),
+  !,
   main([NewBoard, H | T], Other).
 
