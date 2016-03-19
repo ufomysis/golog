@@ -1,6 +1,6 @@
 Golog is a toy implementation of Go in Prolog. 
 
-There are multiple different rulesets for Go. This implementation adopts the [Tromp-Taylor rules](http://tromp.github.io/go.html). These are sometimes referred to as the 'Logical Rules of Go' and are written in a mostly declarative manner. This makes them an excellent target for a Prolog implementation of Go.
+There are many variations of the rules for Go. This implementation adopts the [Tromp-Taylor rules](http://tromp.github.io/go.html). These are sometimes referred to as the 'Logical Rules of Go' and are written in a mostly declarative manner. This makes them an excellent target for a Prolog implementation of Go.
 
 Golog currently supports:
 * Playing on a 5x5 board. This can be changed by setting a constant in go.pl. 5x5 was chosen to demonstrate functionality without being too large.
