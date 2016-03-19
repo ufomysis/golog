@@ -1,6 +1,5 @@
 % Prolog implementation of Go (Tromp-Taylor rules)
 
-
 % There are two players, black and white
 player(black).
 player(white).
@@ -19,7 +18,7 @@ point([X, Y]) :-
 points(L) :- findall(Point, point(Point), L).
 coloredPoints(Color,Board,L) :- findall(Point, pointColor(Board, Point, Color), L).
 
-% We'll play on a 9x9 board
+% We'll play on a 5x5 board
 size(5).
 
 % We'll use directions to define adjacencies of points
@@ -67,7 +66,8 @@ pointColor(Board, [X,Y], Color) :-
 
 reaches(Point, Board, Color) :-
   reaches(Point, Board, Color, []),
-  !. % reaches does an exhaustive, but intensive, search, so we don't want to backtrack. Unfortunately this messes things up if Point is unbound 
+  !. % reaches does an exhaustive, but intensive, search, so we don't want to backtrack.
+  %Unfortunately this messes things up if Point is unbound 
 
 reaches(Point, Board, Color, _) :- 
   pointColor(Board, Point, Color).
@@ -125,15 +125,17 @@ sameLength(L1, L2) :-
   length(L1, X),
   length(L2, X).
 
+% Implicit in the rules: the board doesn't change shape between turns!
 sameShape(A1, A2) :-
   sameLength(A1,A2),
   maplist(sameLength, A1, A2).
 
+% The actions that happen after playing a stone
 evolve(Board, Point, Player, NewBoard) :-
-  stonePlaced(Board, Point, Player, IntermediateBoard),
+  stonePlaced(Board, Point, Player, IntermediateBoard), % Place the stone
   after(Player, Opponent),
-  isConsistent(IntermediateBoard, Opponent, OpponentBoard),
-  isConsistent(OpponentBoard, Player, NewBoard),
+  isConsistent(IntermediateBoard, Opponent, OpponentBoard), % Remove opponent's surrounded groups
+  isConsistent(OpponentBoard, Player, NewBoard), % Remove player's surrounded groups
   sameShape(Board,NewBoard).
  
 scoreReaches(Board, Color, Point) :- reaches(Point, Board, Color).
@@ -193,10 +195,10 @@ main() :-
 
 main([H|T], Player) :-
   coloredPoints(empty, H, L),
-  random_member(Point, L),    
+  random_member(Point, L), % Play randomly. Skill can come later :)
   evolve(H, Point, Player, NewBoard),
   sameShape(H, NewBoard),
-  not(member(NewBoard, [H|T])),
+  not(member(NewBoard, [H|T])), % The board state is not allowed to be repeated. This is called "Positional Super-Ko"
   after(Player, Other),
   showState(NewBoard, Other),
   !,
