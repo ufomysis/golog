@@ -20,7 +20,7 @@ points(L) :- findall(Point, point(Point), L).
 coloredPoints(Color,Board,L) :- findall(Point, pointColor(Board, Point, Color), L).
 
 % We'll play on a 9x9 board
-size(9).
+size(5).
 
 % We'll use directions to define adjacencies of points
 direction(up).
@@ -66,19 +66,20 @@ pointColor(Board, [X,Y], Color) :-
   nth0(Y, Row, Color). 
 
 reaches(Point, Board, Color) :-
-  reaches(Point, Board, []), !.
+  reaches(Point, Board, Color, []),
+  !. % reaches does an exhaustive, but intensive, search, so we don't want to backtrack. Unfortunately this messes things up if Point is unbound 
 
 reaches(Point, Board, Color, _) :- 
-  pointColor(Board, Point, empty).
+  pointColor(Board, Point, Color).
 
 reaches(Point, Board, Color, _) :-
   neighbor(Point, Neighbor, _),
-  pointColor(Board, Neighbor, empty).
+  pointColor(Board, Neighbor, Color).
 
 reaches(Point, Board, Color, Visited) :-
   neighbor(Point, Neighbor, _),
-  pointColor(Board, Point, Color),
-  pointColor(Board, Neighbor, Color),
+  pointColor(Board, Point, ChainColor),
+  pointColor(Board, Neighbor, ChainColor),
   \+ member(Neighbor, Visited),
   append(Visited, [Neighbor], NewVisited),
   !,
@@ -100,8 +101,7 @@ stonePlaced(Board, [X, Y], Color, NewBoard) :-
 pointConsistent(Board, NewBoard, Point) :- 
   reaches(Point, Board, empty),
   pointColor(Board, Point, Color),
-  pointColor(NewBoard, Point, Color),
-  !.
+  pointColor(NewBoard, Point, Color).
 
 pointConsistent(Board, NewBoard, Point) :-
   \+ reaches(Point, Board, empty),
@@ -110,8 +110,7 @@ pointConsistent(Board, NewBoard, Point) :-
 pointColorConsistent(Board, NewBoard, Color, Point) :-
   pointColor(Board, Point, OriginalColor),
   not(OriginalColor = Color),
-  pointColor(NewBoard, Point, OriginalColor),
-  !.
+  pointColor(NewBoard, Point, OriginalColor).
 
 pointColorConsistent(Board, NewBoard, Color, Point) :-
   pointColor(Board, Point, Color),
@@ -136,7 +135,18 @@ evolve(Board, Point, Player, NewBoard) :-
   isConsistent(IntermediateBoard, Opponent, OpponentBoard),
   isConsistent(OpponentBoard, Player, NewBoard),
   sameShape(Board,NewBoard).
-  
+ 
+scoreReaches(Board, Color, Point) :- reaches(Point, Board, Color).
+ 
+scoreColor(Board, Color, X) :-
+  coloredPoints(Color, Board, L),
+  coloredPoints(empty, Board, Empties),
+  include(scoreReaches(Board, Color), Empties, Reaches),
+  length(Reaches, R),
+  length(L, MyColor),
+  X is MyColor + R,
+  nl. 
+
 replicate(N,X,Xs) :-
   length(Xs,N),
   maplist(=(X),Xs).
@@ -148,20 +158,31 @@ newBoard(Board) :-
 
 showRow([]) :-
   nl.
+
 showRow([H|T]) :-
   color(H),
   colorChar(H, C),
   write(C),
   showRow(T).
 
-showBoard([]) :- nl.
+showBoard([]).
+
 showBoard([H|T]) :-
- showRow(H), showBoard(T).
+  showRow(H), showBoard(T).
+
+showScore(Board) :-
+  scoreColor(Board, black, B),
+  write("Black's Score: "),
+  write(B),
+  scoreColor(Board, white, W),
+  write("White's Score: "),
+  write(W), nl.
 
 showState(Board, Player) :-
   showBoard(Board),
+  showScore(Board),
   colorString(Player, String),
-  write(String), nl.
+  write(String), nl, nl.
 
 main() :-
  newBoard(Board),
@@ -171,8 +192,10 @@ main([H|T], Player) :-
   coloredPoints(empty, H, L),
   random_member(Point, L),    
   evolve(H, Point, Player, NewBoard),
+  sameShape(H, NewBoard),
+  not(member(NewBoard, [H|T])),
   !,
-  showBoard(NewBoard),
   after(Player, Other),
+  showState(NewBoard, Other),
   main([NewBoard, H | T], Other).
 
