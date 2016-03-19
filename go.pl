@@ -51,9 +51,9 @@ color(_) :-
   player(_).
 
 %Utilities to relate colors to strings for display
-colorString(empty, "empty").
-colorString(black, "black").
-colorString(white, "white").
+colorString(empty, "Empty").
+colorString(black, "Black").
+colorString(white, "White").
 
 colorChar(empty, "-").
 colorChar(black, "#").
@@ -182,7 +182,10 @@ showState(Board, Player) :-
   showBoard(Board),
   showScore(Board),
   colorString(Player, String),
-  write(String), nl, nl.
+  write(String), write(" to play"),
+  nl,
+  write("==============="),
+  nl, nl.
 
 main() :-
  newBoard(Board),
