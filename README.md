@@ -1,4 +1,4 @@
-Golog is a toy implementation of Go in Prolog. 
+Golog is a toy implementation of Go in Prolog. It is meant to be an interesting example of logical programming, not a practical library.
 
 There are many variations of the rules for Go. This implementation adopts the [Tromp-Taylor rules](http://tromp.github.io/go.html). These are sometimes referred to as the 'Logical Rules of Go' and are written in a mostly declarative manner. This makes them an excellent target for a Prolog implementation of Go.
 
